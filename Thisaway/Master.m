@@ -26,8 +26,8 @@ classdef Master < handle
         node_weight = 0.4;     % 后备值：AI的每一步走棋带来更多的后备选择，减少意外发生。
         control_weight = 0.8;  % 攻击值：AI的进攻性增强，尽可能减少玩家的选择。
         defense_weight = 0.35;  % 防御值：AI的反侦察意识增强，减少被玩家封堵的可能。
-        kill_weight = 10000;    
-        killed_weight = 0.5;    
+        kill_weight = 10000;    % 直接进攻得分
+        killed_weight = 1.5;    % 比depth_weight略小，从而用被堵死风险换取与风险等价的深度值。
 
     end
     
