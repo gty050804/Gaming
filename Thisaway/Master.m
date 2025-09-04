@@ -22,10 +22,13 @@ classdef Master < handle
 
         % AI 能力属性（各属性数值仅与彼此的比例有关，将4个属性都调成100和都调成0.01没有区别。）
         % 体感4个参量分别设置为0.5 0.05 1.2 0.45性能较好。
-        depth_weight = 0.6;     % 远见值：AI对空间的利用效率提高，即在相同的空格中走出更多的步数。
-        node_weight = 0.1;     % 后备值：AI的每一步走棋带来更多的后备选择，减少意外发生。
-        control_weight = 0.5;   % 攻击值：AI的进攻性增强，尽可能减少玩家的选择。
+        depth_weight = 2;     % 远见值：AI对空间的利用效率提高，即在相同的空格中走出更多的步数。
+        node_weight = 0.4;     % 后备值：AI的每一步走棋带来更多的后备选择，减少意外发生。
+        control_weight = 0.8;  % 攻击值：AI的进攻性增强，尽可能减少玩家的选择。
         defense_weight = 0.35;  % 防御值：AI的反侦察意识增强，减少被玩家封堵的可能。
+        kill_weight = 10000;    
+        killed_weight = 0.5;    
+
     end
     
     methods
@@ -253,9 +256,11 @@ classdef Master < handle
                         set(obj.statusText, 'String', '比赛结束！玩家获胜！', ...
                             'ForegroundColor', [0 0 1]);
                         title('比赛结束！玩家获胜！');
+                        disp('年轻人不讲武德！');
                     else
                         set(obj.statusText, 'String', sprintf('玩家赢得第%d局！', obj.roundNumber), ...
                             'ForegroundColor', [0 0 1]);
+                        disp('你下把能赢，我当场把电脑屏幕吃掉。');
                     end
                     
                     set(obj.scoreText, 'String', sprintf('比分: AI %d - %d 玩家', obj.aiWins, obj.playerWins));
@@ -279,9 +284,11 @@ classdef Master < handle
                         set(obj.statusText, 'String', '比赛结束！AI获胜！', ...
                             'ForegroundColor', [1 0 0]);
                         title('比赛结束！AI获胜！');
+                        disp("回家吧，好不好，回家吧，你比较适合做****");
                     else
                         set(obj.statusText, 'String', sprintf('AI赢得第%d局！', obj.roundNumber), ...
                             'ForegroundColor', [1 0 0]);
+                        disp("菜 就多练~");
                     end
                     
                     set(obj.scoreText, 'String', sprintf('比分: AI %d - %d 玩家', obj.aiWins, obj.playerWins));
@@ -325,9 +332,11 @@ classdef Master < handle
                         set(obj.statusText, 'String', '比赛结束！AI获胜！', ...
                             'ForegroundColor', [1 0 0]);
                         title('比赛结束！AI获胜！');
+                        disp("回家吧，好不好，回家吧，你比较适合做****");
                     else
                         set(obj.statusText, 'String', sprintf('AI赢得第%d局！', obj.roundNumber), ...
                             'ForegroundColor', [1 0 0]);
+                        disp("菜 就多练~");
                     end
                     
                     set(obj.scoreText, 'String', sprintf('比分: AI %d - %d 玩家', obj.aiWins, obj.playerWins));
@@ -462,6 +471,7 @@ classdef Master < handle
                             yonn_ai_record = cell(1,size(to_be_selected,1));   
                             go_ai_record = cell(1,size(to_be_selected,1));
                             flag_c = zeros(1,size(to_be_selected,1));
+                            flag_d = zeros(1,size(to_be_selected,1));
                             cellai = cell(1,size(to_be_selected,1)+1);
                             cellai{1,end} = obj.redPos;
                             flag1 = 0;
@@ -786,7 +796,7 @@ classdef Master < handle
                                 if ~isempty(yonn)
                                 for k1 = size(yonn,1)
                                     pos1 = yonn(k1,:);
-                                    for k3 = 1:size(sann_pl_record,1)
+                                    for k3 = 1:size(sann_pl_record,2)
                                         thecell = sann_pl_record{1,k3};
                                         for k2 = 1:size(thecell,1)
                                             pos2 = thecell(k2,:);
@@ -802,7 +812,7 @@ classdef Master < handle
                                 if ~isempty(go)
                                 for k1 = size(go,1)
                                     pos1 = go(k1,:);
-                                    for k3 = 1:size(yonn_pl_record,1)
+                                    for k3 = 1:size(yonn_pl_record,2)
                                         thecell = yonn_pl_record{1,k3};
                                         for k2 = 1:size(thecell,1)
                                             pos2 = thecell(k2,:);
@@ -827,34 +837,76 @@ classdef Master < handle
                             summary = 0.95 * sann_atk + 0.35 * yonn_atk + 0.1 * go_atk;
                             summary = normalize(summary,2,'range');
 
-
+                            
 
                             % loss:
                             for k = 1:size(to_be_selected,1)
-
+                                record = zeros(1,size(to_be_selected_pl,1));
                                 sann = sann_ai_record{1,k};
                                 yonn = yonn_ai_record{1,k};
                                 go = go_ai_record{1,k};
-
+                                sann = unique(sann,"rows","stable");
+                                
+                                % sann:里面的坐标如果被player第二层的某个节点的子节点全包括了，那就不能要。
                                 if ~isempty(sann)
-                                for k1 = size(sann,1)
-                                    pos1 = sann(k1,:);
-                                    for k3 = 1:size(sann_pl_record,1)
-                                        thecell = sann_pl_record{1,k3};
-                                        for k2 = 1:size(thecell,1)
-                                            pos2 = thecell(k2,:);
-                                            if pos1(1) == pos2(1) && pos1(2) == pos2(2)
-                                                sann_down(k) = sann_down(k) + value1(k3);
+                                    
+                                    for k1 = 1:size(sann,1)
+                                        
+                                        pos1 = sann(k1,:);
+                                        for k2 = 1:size(sann_pl_record,2)
+                                            pos2_array = sann_pl_record{1,k2};
+                                            test = any(all(pos2_array - pos1 == 0,2));
+                                            if test 
+                                                record(k2) = record(k2) + 1;
                                             end
+        
                                         end
+
+
                                     end
-                                end
+
+                                    
+                                    if ~isempty(find(record == size(sann,1), 1))
+                                        if flag_d(k) == 0
+                                            
+                                            % disp("哎呀，差点掉进你的陷阱了呢！")
+                                            % disp("我如果走到");
+                                            % disp(to_be_selected(k,:));
+                                            % disp("可能到的地方只有：");
+                                            % disp(sann);
+                                            % disp("你再走到");
+                                            % disp(to_be_selected_pl(record==size(sann,1),:));
+                                            % disp("那我不就跑不掉了吗? 你好坏啊");
+                                            % disp("而你却能到");
+                                            % disp(sann_pl_record{1,record==size(sann,1)});
+                                        end
+                                        flag_d(k) = 1;
+                                    end
+
+
+
+
+
+
+
+                                % for k1 = size(sann,1)
+                                %     pos1 = sann(k1,:);
+                                %     for k3 = 1:size(sann_pl_record,1)
+                                %         thecell = sann_pl_record{1,k3};
+                                %         for k2 = 1:size(thecell,1)
+                                %             pos2 = thecell(k2,:);
+                                %             if pos1(1) == pos2(1) && pos1(2) == pos2(2)
+                                %                 sann_down(k) = sann_down(k) + value1(k3);
+                                %             end
+                                %         end
+                                %     end
+                                % end
                                 end
                                 
                                 if ~isempty(yonn)
                                 for k1 = size(yonn,1)
                                     pos1 = yonn(k1,:);
-                                    for k3 = 1:size(yonn_pl_record,1)
+                                    for k3 = 1:size(yonn_pl_record,2)
                                         thecell = yonn_pl_record{1,k3};
                                         for k2 = 1:size(thecell,1)
                                             pos2 = thecell(k2,:);
@@ -870,7 +922,7 @@ classdef Master < handle
                                 if ~isempty(go)
                                 for k1 = size(go,1)
                                     pos1 = go(k1,:);
-                                    for k3 = 1:size(go_pl_record,1)
+                                    for k3 = 1:size(go_pl_record,2)
                                         thecell = go_pl_record{1,k3};
                                         for k2 = 1:size(thecell,1)
                                             pos2 = thecell(k2,:);
@@ -898,7 +950,7 @@ classdef Master < handle
 
                             maxdepth_ai = normalize(maxdepth_ai, 2, 'range');
                             maxnode_ai = normalize(maxdepth_ai, 2, 'range');
-                            value = maxdepth_ai * obj.depth_weight + maxnode_ai * obj.node_weight + summary * obj.control_weight - total * obj.defense_weight + flag_c * 10000;   % 四部分分别为：最大深度，子节点数量，限制对手数量，被对手限制数量
+                            value = maxdepth_ai * obj.depth_weight + maxnode_ai * obj.node_weight + summary * obj.control_weight - total * obj.defense_weight + flag_c * obj.kill_weight - flag_d * obj.killed_weight;   % 四部分分别为：最大深度，子节点数量，限制对手数量，被对手限制数量
 
 
 
@@ -929,9 +981,11 @@ classdef Master < handle
                         set(obj.statusText, 'String', '比赛结束！玩家获胜！', ...
                             'ForegroundColor', [0 0 1]);
                         title('比赛结束！玩家获胜！');
+                        disp("可恶啊！我一定会回来的！");
                     else
                         set(obj.statusText, 'String', sprintf('玩家赢得第%d局！', obj.roundNumber), ...
                             'ForegroundColor', [0 0 1]);
+                        disp("哼~ 侥幸罢了~");
                     end
                     
                     set(obj.scoreText, 'String', sprintf('比分: AI %d - %d 玩家', obj.aiWins, obj.playerWins));
@@ -952,9 +1006,11 @@ classdef Master < handle
                         set(obj.statusText, 'String', '比赛结束！玩家获胜！', ...
                             'ForegroundColor', [1 0 0]);
                         title('比赛结束！玩家获胜！');
+                        disp("可恶啊！我一定会回来的！");
                 else
                         set(obj.statusText, 'String', sprintf('玩家赢得第%d局！', obj.roundNumber), ...
                             'ForegroundColor', [1 0 0]);
+                        disp("哼~ 侥幸罢了~");
                 end
 
 
