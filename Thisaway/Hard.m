@@ -141,7 +141,7 @@ classdef Hard < handle
             % 设置坐标轴范围
             xlim([0.5, 7.5]);
             ylim([0.5, 7.5]);
-            title(sprintf('马走日游戏 - 7局4胜制 (第%d局)', obj.roundNumber));
+            title(sprintf('Thisaway(Hard) 抢4赛 (第%d局)', obj.roundNumber));
         end
         
         function drawPieces(obj)
