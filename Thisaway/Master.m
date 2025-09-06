@@ -22,12 +22,12 @@ classdef Master < handle
 
         % AI 能力属性（各属性数值仅与彼此的比例有关，将4个属性都调成100和都调成0.01没有区别。）
         
-        depth_weight = 2;     % 远见值：AI对空间的利用效率提高，即在相同的空格中走出更多的步数。
-        node_weight = 0.4;     % 后备值：AI的每一步走棋带来更多的后备选择，减少意外发生。
-        control_weight = 0.8;  % 攻击值：AI的进攻性增强，尽可能减少玩家的选择。
-        defense_weight = 0.35;  % 防御值：AI的反侦察意识增强，减少被玩家封堵的可能。
+        depth_weight = 2.8;     % 远见值：AI对空间的利用效率提高，即在相同的空格中走出更多的步数。
+        node_weight = 1.0;     % 后备值：AI的每一步走棋带来更多的后备选择，减少意外发生。
+        control_weight = 0.4;  % 攻击值：AI的进攻性增强，尽可能减少玩家的选择。
+        defense_weight = 0.5;  % 防御值：AI的反侦察意识增强，减少被玩家封堵的可能。
         kill_weight = 10000;    % 直接进攻得分
-        killed_weight = 1.5;    % 比depth_weight略小，从而用被堵死风险换取与风险等价的深度值。
+        killed_weight = 2.2;    % 比depth_weight略小，从而用被堵死风险换取与风险等价的深度值。
 
     end
     
@@ -311,6 +311,8 @@ classdef Master < handle
         end
         
         function aiMove(obj)
+
+            % parpool(4);
             % AI移动逻辑
             if obj.roundOver
                 return;
@@ -458,7 +460,11 @@ classdef Master < handle
                         if size(to_be_selected,1) == 1
                             selectedMove = to_be_selected;
                         else
-
+                            clear sann_ai_record
+                            clear yonn_ai_record
+                            clear go_ai_record
+                            clear cellai
+                            clear cellpl
                             maxdepth_ai = zeros(1,size(to_be_selected,1));
                             maxnode_ai = zeros(1,size(to_be_selected,1));
                             sann_atk = zeros(1,size(to_be_selected,1));
@@ -474,8 +480,17 @@ classdef Master < handle
                             flag_d = zeros(1,size(to_be_selected,1));
                             cellai = cell(1,size(to_be_selected,1)+1);
                             cellai{1,end} = obj.redPos;
-                            flag1 = 0;
+                            flag1 = zeros(1,size(to_be_selected,1));
+                            flag2 = zeros(1,size(to_be_selected,1));
+                            flag3 = zeros(1,size(to_be_selected,1));
+                            flag4 = zeros(1,size(to_be_selected,1));
+                            flag5 = zeros(1,size(to_be_selected,1));
+                            flag6 = zeros(1,size(to_be_selected,1));
+                            flag7 = zeros(1,size(to_be_selected,1));
+                            flag8 = zeros(1,size(to_be_selected,1));
+                            % flag9 = zeros(1,size(to_be_selected,1));
                             for ysqd1 = 1:size(to_be_selected,1)
+                                
                                 path1 = obj.getPossibleMoves(to_be_selected(ysqd1,:));   % path1代表了第3层的可能位置
                                 row_idx = ~ismember(path1,obj.redPos,"rows");
                                 path1 = path1(row_idx,:);
@@ -485,12 +500,13 @@ classdef Master < handle
                                 cellai{1,ysqd1} = cell(1,size(path1,1)+1);
                                 cellai{1,ysqd1}{1,end} = to_be_selected(ysqd1,:);   % cellai第2个嵌套的尾端记录着第2层的坐标位置
                                 if ~isempty(path1)
-                                    if flag1 == 0
+                                    if flag1(ysqd1) == 0
                                         maxdepth_ai(ysqd1) = maxdepth_ai(ysqd1) + 1;
-                                        maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path1,1);
-                                        flag1 = 1;
+                                        
+                                        flag1(ysqd1) = 1;
                                     end
-                                    flag2 = 0;
+                                    maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path1,1);
+                                    
                                     for ysqd2 = 1:size(path1,1)
                                         path2 = obj.getPossibleMoves(path1(ysqd2,:));    % path2代表了第4层的可能位置
                                         
@@ -503,12 +519,13 @@ classdef Master < handle
                                         cellai{1,ysqd1}{1,ysqd2} = cell(1,size(path2,1)+1);
                                         cellai{1,ysqd1}{1,ysqd2}{1,end} = path1(ysqd2,:);   % cellai第3个嵌套的尾端记录着第3层的坐标位置
                                         if ~isempty(path2)
-                                            if flag2 == 0
+                                            if flag2(ysqd1) == 0
                                                 maxdepth_ai(ysqd1) = maxdepth_ai(ysqd1) + 1;
-                                                maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path2,1);
-                                                flag2 = 1;
+                                                
+                                                flag2(ysqd1) = 1;
                                             end
-                                            flag3 = 0;
+                                            maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path2,1);
+                                            
                                             for ysqd3 = 1:size(path2,1)
                                                 path3 = obj.getPossibleMoves(path2(ysqd3,:));   % path3代表了第5层的可能位置
                                                 go_ai_record{1,ysqd1} = [go_ai_record{1,ysqd1};path3];
@@ -520,12 +537,13 @@ classdef Master < handle
                                                 cellai{1,ysqd1}{1,ysqd2}{1,ysqd3} = cell(1,size(path3,1)+1);
                                                 cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,end} = path2(ysqd3,:);  % cellai第4个嵌套的尾端记录着第4层的坐标位置
                                                 if ~isempty(path3)
-                                                    if flag3 == 0
+                                                    if flag3(ysqd1) == 0
                                                         maxdepth_ai(ysqd1) = maxdepth_ai(ysqd1) + 1;
-                                                        maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path3,1);
-                                                        flag3 = 1;
+                                                        
+                                                        flag3(ysqd1) = 1;
                                                     end
-                                                    flag4 = 0;
+                                                    maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path3,1);
+                                                    
                                                     for ysqd4 = 1:size(path3,1)
                                                         path4 = obj.getPossibleMoves(path3(ysqd4,:));   % path4代表了第6层的可能位置
                                                         row_idx1 = ismember(path4,cellai{1,end},"rows");
@@ -537,12 +555,13 @@ classdef Master < handle
                                                         cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4} = cell(1,size(path4,1)+1);
                                                         cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,end} = path3(ysqd4,:);  % cellai第5个嵌套的尾端记录着第5层的坐标位置
                                                         if ~isempty(path4)
-                                                            if flag4 == 0
+                                                            if flag4(ysqd1) == 0
                                                                 maxdepth_ai(ysqd1) = maxdepth_ai(ysqd1) + 1;
-                                                                maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path4,1);
-                                                                flag4 = 1;
+                                                                
+                                                                flag4(ysqd1) = 1;
                                                             end
-                                                            flag5 = 0;
+                                                            maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path4,1);
+                                                            
                                                             for ysqd5 = 1:size(path4,1)
                                                                 path5 = obj.getPossibleMoves(path4(ysqd5,:));   % path4代表了第6层的可能位置
                                                                 row_idx1 = ismember(path5,cellai{1,end},"rows");
@@ -555,12 +574,13 @@ classdef Master < handle
                                                                 cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5} = cell(1,size(path5,1)+1);
                                                                 cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,end} = path4(ysqd5,:);  % cellai第5个嵌套的尾端记录着第5层的坐标位置
                                                                 if ~isempty(path5)
-                                                                    if flag5 == 0
+                                                                    if flag5(ysqd1) == 0
                                                                         maxdepth_ai(ysqd1) = maxdepth_ai(ysqd1) + 1;
-                                                                        maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path5,1);
-                                                                        flag5 = 1;
+                                                                        
+                                                                        flag5(ysqd1) = 1;
                                                                     end
-                                                                    flag6 = 0;
+                                                                    maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path5,1);
+                                                                    
                                                                     for ysqd6 = 1:size(path5,1)
                                                                         path6 = obj.getPossibleMoves(path5(ysqd6,:));   % path4代表了第6层的可能位置
                                                                         row_idx1 = ismember(path6,cellai{1,end},"rows");
@@ -571,13 +591,62 @@ classdef Master < handle
                                                                         row_idx6 = ismember(path6,cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,end},"rows");
                                                                         row_idx = row_idx6 + row_idx5 + row_idx4 + row_idx3 + row_idx2 + row_idx1;
                                                                         path6 = path6(row_idx==0,:);
-                                                                        cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,ysqd6} = cell(1,1);
-                                                                        cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,ysqd6}{1,1} = path5(ysqd6,:);  % cellai第5个嵌套的尾端记录着第5层的坐标位置
+                                                                        cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,ysqd6} = cell(1,size(path6,1)+1);
+                                                                        cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,ysqd6}{1,end} = path5(ysqd6,:);  % cellai第5个嵌套的尾端记录着第5层的坐标位置
                                                                         if ~isempty(path6)
-                                                                            if flag6 == 0
+                                                                            if flag6(ysqd1) == 0
                                                                                 maxdepth_ai(ysqd1) = maxdepth_ai(ysqd1) + 1;
-                                                                                maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path6,1);
-                                                                                flag6 = 1;
+                                                                                
+                                                                                flag6(ysqd1) = 1;
+                                                                            end
+                                                                            % maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path6,1);
+                                                                            
+                                                                            for ysqd7 = 1:size(path6,1)
+                                                                                path7 = obj.getPossibleMoves(path6(ysqd7,:));   % path4代表了第6层的可能位置
+                                                                                row_idx1 = ismember(path7,cellai{1,end},"rows");
+                                                                                row_idx2 = ismember(path7,cellai{1,ysqd1}{1,end},"rows");
+                                                                                row_idx3 = ismember(path7,cellai{1,ysqd1}{1,ysqd2}{1,end},"rows");
+                                                                                row_idx4 = ismember(path7,cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,end},"rows");
+                                                                                row_idx5 = ismember(path7,cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,end},"rows");
+                                                                                row_idx6 = ismember(path7,cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,end},"rows");
+                                                                                row_idx7 = ismember(path7,cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,ysqd6}{1,end},"rows");
+                                                                                row_idx = row_idx7 + row_idx6 + row_idx5 + row_idx4 + row_idx3 + row_idx2 + row_idx1;
+                                                                                path7 = path7(row_idx==0,:);
+                                                                                cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,ysqd6}{1,ysqd7} = cell(1,size(path7,1)+1);
+                                                                                cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,ysqd6}{1,ysqd7}{1,end} = path6(ysqd7,:);  % cellai第5个嵌套的尾端记录着第5层的坐标位置
+                                                                                if ~isempty(path7)
+                                                                                    if flag7(ysqd1) == 0
+                                                                                        maxdepth_ai(ysqd1) = maxdepth_ai(ysqd1) + 1;
+                                                                                        
+                                                                                        flag7(ysqd1) = 1;
+                                                                                    end
+                                                                                    % maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path7,1);
+                                                                                    
+                                                                                    for ysqd8 = 1:size(path7,1)
+                                                                                        path8 = obj.getPossibleMoves(path7(ysqd8,:));   % path4代表了第6层的可能位置
+                                                                                        row_idx1 = ismember(path8,cellai{1,end},"rows");
+                                                                                        row_idx2 = ismember(path8,cellai{1,ysqd1}{1,end},"rows");
+                                                                                        row_idx3 = ismember(path8,cellai{1,ysqd1}{1,ysqd2}{1,end},"rows");
+                                                                                        row_idx4 = ismember(path8,cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,end},"rows");
+                                                                                        row_idx5 = ismember(path8,cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,end},"rows");
+                                                                                        row_idx6 = ismember(path8,cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,end},"rows");
+                                                                                        row_idx7 = ismember(path8,cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,ysqd6}{1,end},"rows");
+                                                                                        row_idx8 = ismember(path8,cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,ysqd6}{1,ysqd7}{1,end},"rows");
+                                                                                        row_idx = row_idx8 + row_idx7 + row_idx6 + row_idx5 + row_idx4 + row_idx3 + row_idx2 + row_idx1;
+                                                                                        path8 = path8(row_idx==0,:);
+                                                                                        cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,ysqd6}{1,ysqd7}{1,ysqd8} = cell(1,1);
+                                                                                        cellai{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,ysqd5}{1,ysqd6}{1,ysqd7}{1,ysqd8}{1,1} = path7(ysqd8,:);  % cellai第5个嵌套的尾端记录着第5层的坐标位置
+                                                                                        if ~isempty(path8)
+                                                                                            if flag8(ysqd1) == 0
+                                                                                                maxdepth_ai(ysqd1) = maxdepth_ai(ysqd1) + 1;
+                                                                                                
+                                                                                                flag8(ysqd1) = 1;
+                                                                                            end
+                                                                                            % maxnode_ai(ysqd1) = maxnode_ai(ysqd1) + size(path8,1);
+                                                                                        end
+                                                                                    end
+
+                                                                                end
                                                                             end
                                                                         end
                                                                     end
@@ -609,7 +678,11 @@ classdef Master < handle
                             maxnode_pl = zeros(1,size(to_be_selected_pl,1));
                             cellpl = cell(1,size(to_be_selected_pl,1)+1);
                             cellpl{1,end} = obj.bluePos;
-                            flag1 = 0;
+                            flag1 = zeros(1,size(to_be_selected_pl,1));
+                            flag2 = zeros(1,size(to_be_selected_pl,1));
+                            flag3 = zeros(1,size(to_be_selected_pl,1));
+                            flag4 = zeros(1,size(to_be_selected_pl,1));
+                            % flag5 = zeros(1,size(to_be_selected_pl,1));
 
                             for ysqd1 = 1:size(to_be_selected_pl,1)
                                 
@@ -622,12 +695,13 @@ classdef Master < handle
                                 cellpl{1,ysqd1} = cell(1,size(path1,1)+1);
                                 cellpl{1,ysqd1}{1,end} = to_be_selected_pl(ysqd1,:);   % cellpl第2个嵌套的尾端记录着第2层的坐标位置
                                 if ~isempty(path1)
-                                    if flag1 == 0
+                                    if flag1(ysqd1) == 0
                                         maxdepth_pl(ysqd1) = maxdepth_pl(ysqd1) + 1;
-                                        maxnode_pl(ysqd1) = maxnode_pl(ysqd1) + size(path1,1);
-                                        flag1 = 1;
+                                        
+                                        flag1(ysqd1) = 1;
                                     end
-                                    flag2 = 0;
+                                    maxnode_pl(ysqd1) = maxnode_pl(ysqd1) + size(path1,1);
+                                    
                                     for ysqd2 = 1:size(path1,1)
                                         path2 = obj.getPossibleMoves(path1(ysqd2,:));    % path2代表了第4层的可能位置
                                         yonn_pl_record{1,ysqd1} = [yonn_pl_record{1,ysqd1};path2];
@@ -638,12 +712,13 @@ classdef Master < handle
                                         cellpl{1,ysqd1}{1,ysqd2} = cell(1,size(path2,1)+1);
                                         cellpl{1,ysqd1}{1,ysqd2}{1,end} = path1(ysqd2,:);   % cellpl第3个嵌套的尾端记录着第3层的坐标位置
                                         if ~isempty(path2)
-                                            if flag2 == 0
+                                            if flag2(ysqd1) == 0
                                                 maxdepth_pl(ysqd1) = maxdepth_pl(ysqd1) + 1;
-                                                maxnode_pl(ysqd1) = maxnode_pl(ysqd1) + size(path2,1);
-                                                flag2 = 1;
+                                                
+                                                flag2(ysqd1) = 1;
                                             end
-                                            flag3 = 0;
+                                            maxnode_pl(ysqd1) = maxnode_pl(ysqd1) + size(path2,1);
+                                            
                                             for ysqd3 = 1:size(path2,1)
                                                 path3 = obj.getPossibleMoves(path2(ysqd3,:));   % path3代表了第5层的可能位置
                                                 go_pl_record{1,ysqd1} = [go_pl_record{1,ysqd1};path3];
@@ -655,12 +730,13 @@ classdef Master < handle
                                                 cellpl{1,ysqd1}{1,ysqd2}{1,ysqd3} = cell(1,size(path3,1)+1);
                                                 cellpl{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,end} = path2(ysqd3,:);  % cellpl第4个嵌套的尾端记录着第4层的坐标位置
                                                 if ~isempty(path3)
-                                                    if flag3 == 0
+                                                    if flag3(ysqd1) == 0
                                                         maxdepth_pl(ysqd1) = maxdepth_pl(ysqd1) + 1;
-                                                        maxnode_pl(ysqd1) = maxnode_pl(ysqd1) + size(path3,1);
-                                                        flag3 = 1;
+                                                        
+                                                        flag3(ysqd1) = 1;
                                                     end
-                                                    flag4 = 0;
+                                                    maxnode_pl(ysqd1) = maxnode_pl(ysqd1) + size(path3,1);
+
                                                     for ysqd4 = 1:size(path3,1)
                                                         path4 = obj.getPossibleMoves(path3(ysqd4,:));   % path4代表了第6层的可能位置
                                                         row_idx1 = ismember(path4,cellpl{1,end},"rows");
@@ -672,11 +748,12 @@ classdef Master < handle
                                                         cellpl{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4} = cell(1,1);
                                                         cellpl{1,ysqd1}{1,ysqd2}{1,ysqd3}{1,ysqd4}{1,1} = path3(ysqd4,:);  % cellpl第5个嵌套的尾端记录着第5层的坐标位置
                                                         if ~isempty(path4)
-                                                            if flag4 == 0
+                                                            if flag4(ysqd1) == 0
                                                                 maxdepth_pl(ysqd1) = maxdepth_pl(ysqd1) + 1;
-                                                                maxnode_pl(ysqd1) = maxnode_pl(ysqd1) + size(path4,1);
-                                                                flag4 = 1;
+                                                                
+                                                                flag4(ysqd1) = 1;
                                                             end
+                                                            maxnode_pl(ysqd1) = maxnode_pl(ysqd1) + size(path4,1);
 
 
                                                         end
@@ -704,7 +781,10 @@ classdef Master < handle
 
                             end
 
+                            maxdepth_pl_new = maxdepth_pl_new.^2;
+
                             maxdepth_pl = maxdepth_pl_new;
+                            
 
                             maxdepth_pl = normalize(maxdepth_pl,2,'range');    % 对应各节点的分值
 
@@ -947,11 +1027,26 @@ classdef Master < handle
                             total = 0.6 * sann_down + 0.5 * yonn_down + 0.3 * go_down;
                             total = normalize(total,2,'range');
 
-
+                            % maxdepth_actual = maxnode_ai;
                             maxdepth_ai = normalize(maxdepth_ai, 2, 'range');
-                            maxnode_ai = normalize(maxdepth_ai, 2, 'range');
+                            maxnode_ai = normalize(maxnode_ai, 2, 'range');
+
+                            
+                            format bank
+
                             value = maxdepth_ai * obj.depth_weight + maxnode_ai * obj.node_weight + summary * obj.control_weight - total * obj.defense_weight + flag_c * obj.kill_weight - flag_d * obj.killed_weight;   % 四部分分别为：最大深度，子节点数量，限制对手数量，被对手限制数量
 
+                            for l = 1:length(to_be_selected)
+
+                                fprintf("坐标 %d %d 的得分为:",to_be_selected(l,1),to_be_selected(l,2));
+                                disp(value(l)*100/(obj.control_weight+obj.depth_weight+obj.node_weight));
+                                % fprintf("坐标 %d %d 的深度为:",to_be_selected(l,1),to_be_selected(l,2));
+                                % disp(maxdepth_actual(l));
+
+                            end
+
+                            fprintf('\n');
+                            fprintf('\n');
 
 
 
